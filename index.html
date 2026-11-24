@@ -176,13 +176,12 @@ section>*{position:relative}
   </div>
  </section>
 
- <section class="rev">
+<section class="rev">
   <h2 class="sec script gold">Send your wishes </h2>
   <input id="wn" placeholder="Your name" maxlength="30">
-  <textarea id="wm" rows="2" placeholder="Write a sweet wish…" maxlength="140"></textarea>
+  <textarea id="wm_msg" rows="2" placeholder="Write a sweet wish…" maxlength="140"></textarea>
   <div><button class="btn" id="send">Send wish </button></div>
-  <div style="margin-top:6px"><button class="btn alt" data-q="Happy married life!">Happy married life</button><button class="btn alt" data-q="Congratulations!">Congratulations</button><button class="btn alt" data-q="Forever love!">Forever love</button><button class="btn alt" data-q="Blessings to you both.">Blessings</button></div>
-  <div id="wall"></div>
+  <div id="wish_thanks" style="display:none;max-width:380px;margin:16px auto 0;padding:16px 18px;border-radius:16px;background:#ffffff14;border:1px solid var(--gold);color:var(--gold2);animation:pop .5s cubic-bezier(.3,1.7,.5,1)"></div>
  </section>
 
  <section class="rev">
@@ -244,17 +243,30 @@ var SUR=[' Mithila said yes… and Riddhi is still smiling!',' Reminder: save ro
 $('surprise').onclick=function(e){$('surp').textContent=SUR[Math.random()*SUR.length|0].trim();burst(e.clientX,e.clientY,70);show(4);float(['','','',''],14)};
 $('wa').href='https://wa.me/?text='+encodeURIComponent('You’re invited to Riddhi & Mithila’s wedding! 9 December 2026, 7:30 pm, Soronika Community Hall, Chattogram. ');
 
-/* wishes (saved on server via Netlify Function, local fallback) */
-var WC=['#3f6fb5','#c0508a','#b07a3b','#3a8f6b','#7a54b8'],W=[],API=0;
-function add(w,i){var d=document.createElement('div');d.className='wish';d.style.background=WC[i%WC.length];var b=document.createElement('b');b.textContent=w.n+': ';d.appendChild(b);d.appendChild(document.createTextNode(w.m));$('wall').appendChild(d)}
-function draw(){$('wall').innerHTML='';W.forEach(add)}
-function load(){fetch('/api/wishes').then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(a){W=a;API=1;draw()}).catch(function(){try{W=JSON.parse(localStorage.getItem('rm_wishes')||'[]')}catch(e){}draw()})}
-function send(m){var n=$('wn').value.trim()||'A friend';m=m||$('wm').value.trim();if(!m)return;var w={n:n,m:m};$('wm').value='';
-fetch('/api/wishes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(w)}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(a){W=a;API=1;draw()}).catch(function(){W.push(w);try{localStorage.setItem('rm_wishes',JSON.stringify(W.slice(-30)))}catch(e){}draw()});
-var r=$('wall').getBoundingClientRect();burst(innerWidth/2,Math.min(Math.max(r.top,100),innerHeight-100),60);float([],8)}
-$('send').onclick=function(){send()};
-document.querySelectorAll('[data-q]').forEach(function(b){b.onclick=function(){send(b.getAttribute('data-q'))}});
-load();setInterval(function(){if(API)load()},30000);
+/* wishes (saved privately via Netlify Function to Google Sheet) */
+function send(){
+  var n=$('wn').value.trim()||'A friend';
+  var m=$('wm_msg').value.trim();
+  if(!m)return;
+  var btn=$('send');
+  var box=$('wish_thanks');
+  btn.disabled=true;
+  btn.textContent='Sending...';
+  fetch('/api/wishes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({n:n,m:m})})
+  .then(function(r){if(!r.ok)throw 0;return r.json()})
+  .catch(function(){})
+  .finally(function(){
+    $('wn').value='';$('wm_msg').value='';
+    btn.disabled=false;
+    btn.textContent='Send wish ';
+    box.innerHTML='<svg width="26" height="24" viewBox="0 0 100 90" style="vertical-align:middle;margin-bottom:6px"><path d="M50 85C10 55 2 30 18 16c12-10 26-3 32 8 6-11 20-18 32-8 16 14 8 39-32 69z" fill="#ff7aa8"/></svg><div class="script" style="font-size:1.7rem;color:#fff;margin-bottom:4px">Thank you, '+n.replace(/[<>&]/g,'')+'!</div><div style="font-size:1.05rem;line-height:1.4">Thank you for your warm blessings and prayers for Riddhi &amp; Mithila. May the Triple Gem bless you always.</div>';
+    box.style.display='block';
+    var r=box.getBoundingClientRect();
+    burst(innerWidth/2,Math.min(Math.max(r.top,100),innerHeight-100),70);
+    float([],10);
+  });
+}
+$('send').onclick=send;
 
 var LC=['#e0556f','#d4a95f','#3f6fb5','#ff9a3c','#7a54b8'];
 function lants(el,pos){pos.forEach(function(l,i){var d=document.createElement('div');d.className='lant';d.style.left=l+'%';d.style.animationDelay=(i*.4)+'s';d.innerHTML='<svg viewBox="0 0 40 90"><path d="M20 0v22" stroke="#d4a95f"/><rect x="6" y="22" width="28" height="36" rx="12" fill="'+LC[i%5]+'"/><path d="M12 22v36M20 22v36M28 22v36" stroke="#f3d99a" stroke-opacity=".6"/><rect x="14" y="18" width="12" height="5" fill="#d4a95f"/><rect x="14" y="57" width="12" height="5" fill="#d4a95f"/><path d="M20 62v22" stroke="#f3d99a" stroke-width="2"/></svg>';el.appendChild(d)})}
