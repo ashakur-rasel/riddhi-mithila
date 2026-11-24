@@ -4,15 +4,34 @@ export default async (req) => {
   const store = getStore("wishes");
   const h = { "Content-Type": "application/json", "Cache-Control": "no-store" };
   let list = (await store.get("all", { type: "json" })) || [];
+
   if (req.method === "POST") {
     const b = await req.json().catch(() => ({}));
     const n = String(b.n || "A friend").trim().slice(0, 30);
     const m = String(b.m || "").trim().slice(0, 140);
-    if (!m) return new Response(JSON.stringify({ error: "empty" }), { status: 400, headers: h });
-    list.push({ n, m, t: Date.now() });
+    if (!m) {
+      return new Response(JSON.stringify({ error: "empty" }), { status: 400, headers: h });
+    }
+
+    const entry = { n, m, t: Date.now() };
+    list.push(entry);
     list = list.slice(-200);
     await store.setJSON("all", list);
+
+    const sheetUrl = process.env.SHEET_WEBHOOK_URL;
+    if (sheetUrl) {
+      try {
+        await fetch(sheetUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ n, m })
+        });
+      } catch (e) {
+        console.error("Sheet sync failed:", e);
+      }
+    }
   }
+
   return new Response(JSON.stringify(list), { headers: h });
 };
 
